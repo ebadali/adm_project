@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1552261774993.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "310324883",
+    "id" : "6D93D421",
+    "lastKnownWriteTime" : 1552259040,
+    "last_content_update" : 1552259040,
+    "path" : "~/Documents/NCI/Seconds Semester/ADM/adm_project/processor.R",
+    "project_path" : "processor.R",
+    "properties" : {
+        "cursorPosition" : "57,2",
+        "scrollLine" : "42"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

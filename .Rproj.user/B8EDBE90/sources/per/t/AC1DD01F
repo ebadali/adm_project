@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1552269962534.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "AC1DD01F",
+    "lastKnownWriteTime" : 7310594974593405728,
+    "last_content_update" : 1552269962534,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "id" : "4c27c755ee0e4a969a5839c678ccd39e",
+        "name" : "result_inv",
+        "title" : "result_inv"
+    },
+    "relative_order" : 7,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "object_explorer"
+}
