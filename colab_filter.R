@@ -133,120 +133,144 @@ recc_data_train <- ratings_matrix[which_train, ]
 recc_data_test <- ratings_matrix[!which_train, ]
 (recc_data_train)
 
-####### -> IBCF  ###########
+####### -> IBCF  
+
+# recommenderRegistry
+# recommender_models <- recommenderRegistry$get_entries(dataType ="realRatingMatrix")
+# recommender_models
+# View(recommender_models$UBCF_realRatingMatrix$parameters)
+# 
+# recc_model <- Recommender(data = recc_data_train, method = "UBCF")
+# recc_model
+# model_details <- getModel(recc_model)
+# view(model_details)
+# names(model_details)
+# model_details$data
+# 
+# 
+# n_recommended <- 2
+# recc_predicted <- predict(object = recc_model,newdata = recc_data_test, n = n_recommended) 
+# recc_predicted
+# 
+# # Finding actual values on the 
+# recc_predicted@itemLabels
+# recc_matrix <- sapply(recc_predicted@items, function(x){
+#   colnames(ratings_matrix)[x]
+# })
+# length(unique(recc_matrix))
+# dim(recc_matrix)
+# 
+# 
+# 
+# ## create 90/10 split (known/unknown) for the first 500 users in Jester5k
+# e <- evaluationScheme(ratings_matrix, method="split", train=0.9,
+#                       k=10, given=0, goodRating=1)
+# 
+# e <- evaluationScheme(ratings_matrix, method="cross-validation",
+#                       k=3, given=1,goodRating=1)
+# e
+# r <- Recommender(data = recc_data_train, method = "IBCF", parameter = list(method = "Jaccard"))
+# 
+# r
+# n_recommended <- 6
+# p <- predict(object = r, newdata = recc_data_test,n = n_recommended)
+# p
+# p@items
+# 
+# recc_matrix <- sapply(p@items, function(x){
+#   colnames(ratings_matrix)[x]
+# })
+# length(unique(recc_matrix))
+# 
+# # list tour names
+# 
+# recc_matrix
+# library(caret)
+# confusionMatrix(data = p@ratings)
+# 
+# calcPredictionAccuracy(x=p,data=recc_data_test,given=p@n)
+# 
+# 
+# recommenderRegistry$get_entry_names()
+# rec <- Recommender(ratings_matrix, method = "POPULAR")
+# rec
+# str(getModel(rec))
+# recommenderRegistry$get_entry("POPULAR", dataType = "binaryRatingMatrix")
+# recommenderRegistry$get_entry("SVD", dataType = "realRatingMatrix")
 
 
-recommenderRegistry
-recommender_models <- recommenderRegistry$get_entries(dataType ="realRatingMatrix")
-recommender_models
-View(recommender_models$UBCF_realRatingMatrix$parameters)
+##############################################################
+# es <- evaluationScheme(ratings_matrix, method="cross-validation",
+#                        k=4, given=1)
+# es
+# r <- Recommender(getData(es, "train"), "IBCF")
+# r
+# p <- predict(r, getData(es, "known"), type="topNList", n=3)
+# p
+# algorithms <- list(
+#   RANDOM = list(name = "RANDOM", param = NULL),
+#   POPULAR = list(name = "POPULAR", param = NULL)
+# )
+# 
+# evlist <- evaluate(es, algorithms)
+# evlist
+# avg(evlist)
+# plot(evlist, main = "ROC curve",legend="topright")
+# plot(evlist,"prec/rec", main = "Precision-recall",legend="topright")
 
-recc_model <- Recommender(data = recc_data_train, method = "UBCF")
-recc_model
-model_details <- getModel(recc_model)
-view(model_details)
-names(model_details)
-model_details$data
+# eval_accuracy  <- calcPredictionAccuracy(p, getData(e, "unknown"), given=p@n, goodRating=1,byUser=FALSE)
+
+########################## All In. Brute Force. hallelujah ! ####################################
+number_of_folds = 4
+# 'given' is a problematic parameter here.
+es <- evaluationScheme(ratings_matrix, method="cross-validation",k=number_of_folds, given=1)
+es
+
+models_to_evaluate <- list(
+  IBCF_jack = list(name = "IBCF", param = list(method =
+                                                "Jaccard")),
+  IBCF_cos = list(name = "IBCF", param = list(method =
+                                                "cosine")),
+  IBCF_cor = list(name = "IBCF", param = list(method =
+                                                "pearson")),
+  UBCF_jack = list(name = "UBCF", param = list(method =
+                                                 "Jaccard")),
+  UBCF_cos = list(name = "UBCF", param = list(method =
+                                                "cosine")),
+  UBCF_cor = list(name = "UBCF", param = list(method =
+                                                "pearson")),
+  random = list(name = "RANDOM", param=NULL)
+)
+
+# Different number of recommendations
+# for : 1,5,10,20,....,100 recommendations
+n_recommendations <- c(1, 5, seq(10, 100, 10))
+n_recommendations
+list_results <- evaluate(x = es, method = models_to_evaluate, n= n_recommendations)
+
+# checking which ones are best. Particularly, IBCF cosine and Jackard
+
+#sapply(list_results, class) == "evaluationResults"
+avg_matrices <- lapply(list_results, avg)
+class(avg_matrices)
+
+tail(avg_matrices$IBCF_cos)
+tail(avg_matrices$IBCF_jack)
+avg_matrices$IBCF_jack[order(avg_matrices$IBCF_jack)] # higest 56.260135135
+avg_matrices$IBCF_cos[order(avg_matrices$IBCF_cos)] # higest  56.302364865
+
+# Plotting ROC curve
+plot(list_results,  legend = "bottomright") 
+title("ROCcurve")
 
 
-n_recommended <- 2
-recc_predicted <- predict(object = recc_model,newdata = recc_data_test, n = n_recommended) 
-recc_predicted
-
-# Finding actual values on the 
-recc_predicted@itemLabels
-recc_matrix <- sapply(recc_predicted@items, function(x){
-  colnames(ratings_matrix)[x]
-})
-length(unique(recc_matrix))
-dim(recc_matrix)
-
-
-
-## create 90/10 split (known/unknown) for the first 500 users in Jester5k
-e <- evaluationScheme(ratings_matrix, method="split", train=0.9,
-                      k=10, given=0, goodRating=1)
-
-e <- evaluationScheme(ratings_matrix, method="cross-validation",
-                      k=3, given=1,goodRating=1)
-e
-r <- Recommender(data = recc_data_train, method = "IBCF", parameter = list(method = "Jaccard"))
-
-r
-n_recommended <- 6
-p <- predict(object = r, newdata = recc_data_test,n = n_recommended)
-p
-p@items
-
-recc_matrix <- sapply(p@items, function(x){
-  colnames(ratings_matrix)[x]
-})
-length(unique(recc_matrix))
-
-# list movie names
-
-recc_matrix
-library(caret)
-confusionMatrix(data = p@ratings)
-
-calcPredictionAccuracy(x=p,data=recc_data_test,given=p@n)
-
-
-####### -> UBCF  ###########
-
-
-r <- Recommender(data = recc_data_train, method = "UBCF", parameter = list(method = "Jaccard"))
-
-calcPredictionAccuracy(x=p,data=recc_data_test,given=p@n)
-
-####### -> UBCF  ###########
-
-number_of_runs <-1
-e <- evaluationScheme(ratings_matrix[1:500,], method="split", train=0.9,
-                      k=number_of_runs, given=1)
-e
-r <- Recommender(getData(e, "train"), "UBCF")
-model_details <- getModel(r)
-model_details
-image(model_details$data)
-
-p <- predict(r, getData(e, "known"), type="topNList" , n=4)
-p
-image(p@data)
-calcPredictionAccuracy(x=p, data=getData(e, "unknown"),given=100,byUser=FALSE)
+# Plotting precision/recall curve
+plot(list_results, "prec/rec", legend = "topleft")
+title("Precision-recall")
 
 
 
-############
-b <- as(ratings_matrix, "binaryRatingMatrix")
-b
-dim(b)
-colCounts(b)
-image(b[1:100])
-
-e <- evaluationScheme(b, method="split", train=0.9,
-                      k=1, given=1)
-e
-r <- Recommender(getData(e, "train"), "IBCF")
-r
-# p <- predict(r, getData(e, "known"), type="ratings")
-p <- predict(r, getData(e, "known"), type="topNList", n=3)
-p
-as(p,"list")[1:10]
-
-p
-# calcPredictionAccuracy(p, getData(e, "unknown"))
-eval_accuracy  <- calcPredictionAccuracy(p, getData(e, "unknown"), given=1, goodRating=1)
-
-class(eval_accuracy)
-
-results <- evaluate(x = eval_accuracy, method = model_to_evaluate, n =
-                      seq(10, 100, 10))
-
-recommenderRegistry$get_entry_names()
-rec <- Recommender(ratings_matrix, method = "POPULAR")
-rec
-str(getModel(rec))
-recommenderRegistry$get_entry("POPULAR", dataType = "binaryRatingMatrix")
-recommenderRegistry$get_entry("SVD", dataType = "realRatingMatrix")
-
+########### TODO: Visualizations to add ###########
+## 1. most recommended tour by all of the methods ? 
+## 2. most recommended tour among the users ?
+## 3. ?
