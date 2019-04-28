@@ -88,12 +88,12 @@ length(indremoved)
 #df2 = df[ -indremoved, ]
 #dim(df2)
 # lest find occurences of tour with id == 1 
-#unique(which(colnames(df)==1))
+unique(which(colnames(df)==1))
 tail(df)
 
 binaryMatrix <- as.matrix(x = df)
 dim(binaryMatrix)
-#binaryMatrix <- matrix(as.numeric(unlist(df)),nrow=nrow(df))
+binaryMatrix <- matrix(as.numeric(unlist(df)),nrow=nrow(df))
 
 # binaryMatrix <- matrix( rep( 0, len= length(table_users$id)), nrow = length(table_users$userIds))
 
@@ -103,10 +103,12 @@ binaryMatrix[is.na(binaryMatrix)] <- 0
 
 ratings_matrix <- as(binaryMatrix, "binaryRatingMatrix")
 ratings_matrix
-image(ratings_matrix, main = "Binary rating matrix")
 
+image(ratings_matrix[300:350,], main = "Binary rating matrix")
+
+head(ratings_matrix)
 # Checking first 100 rows of purchases
-image(ratings_matrix[1:100, ], main = "Binary rating matrix")
+image(ratings_matrix, main = "Binary rating matrix")
 dim(ratings_matrix)
 #image(ratings_matrix, main = "Binary rating matrix")
 
@@ -119,7 +121,7 @@ dff <- (map(df, ~sum(is.na(.))))
 totalEmptyCell <- sum(sapply(dff, function(x) sum(x)))
 totalCell <- dim(df)[1] * dim(df)[2]
 Sparsity <- totalEmptyCell / totalCell
-cat("Sparsity of Percentage", Sparsity * 100)
+cat("Sparsity % ", Sparsity * 100)
 
 ####### Finsihed Binary Ratings  ###########
 
@@ -221,6 +223,9 @@ recc_data_test <- ratings_matrix[!which_train, ]
 # eval_accuracy  <- calcPredictionAccuracy(p, getData(e, "unknown"), given=p@n, goodRating=1,byUser=FALSE)
 
 ########################## All In. Brute Force. hallelujah ! ####################################
+library(caret)
+data("MSWeb")
+
 number_of_folds = 4
 # 'given' is a problematic parameter here.
 es <- evaluationScheme(ratings_matrix, method="cross-validation",k=number_of_folds, given=1)
@@ -246,13 +251,21 @@ models_to_evaluate <- list(
 # for : 1,5,10,20,....,100 recommendations
 n_recommendations <- c(1, 5, seq(10, 100, 10))
 n_recommendations
-list_results <- evaluate(x = es, method = models_to_evaluate, n= n_recommendations)
+list_results <- evaluate(x = es, method = models_to_evaluate, n= n_recommendations,  type="topNList")
 
+class(list_results$IBCF_jack[[1]])
+str(list_results$IBCF_jack)
+str(list_results[[1]])
+plot(list_results@.Data[[1]], annotate = TRUE)
+
+plot(list_results@.Data[[1]]@results[[1]]@cm)
+
+str(list_results@.Data[[1]]@results[[1]]@cm)
 # checking which ones are best. Particularly, IBCF cosine and Jackard
 
 #sapply(list_results, class) == "evaluationResults"
 avg_matrices <- lapply(list_results, avg)
-class(avg_matrices)
+(avg_matrices)
 
 tail(avg_matrices$IBCF_cos)
 tail(avg_matrices$IBCF_jack)
@@ -260,7 +273,7 @@ avg_matrices$IBCF_jack[order(avg_matrices$IBCF_jack)] # higest 56.260135135
 avg_matrices$IBCF_cos[order(avg_matrices$IBCF_cos)] # higest  56.302364865
 
 # Plotting ROC curve
-plot(list_results,  legend = "bottomright") 
+plot(list_results, annotate=1, legend = "bottomright") 
 title("ROCcurve")
 
 
@@ -271,6 +284,121 @@ title("Precision-recall")
 
 
 ########### TODO: Visualizations to add ###########
-## 1. most recommended tour by all of the methods ? 
-## 2. most recommended tour among the users ?
-## 3. ?
+## --- 1. most recommended tour by all of the methods ? -- 
+## 2. most purchased tour among the users ?
+## 3. most active/purchasing user ?
+
+## 3. Most purchased tours ?
+mostRecommendedTour <- df %>%
+                          replace(is.na(.), 0) %>%
+                          summarise_all(funs(sum))
+                          
+
+# all sums
+(mostRecommendedTour)
+
+d <- sort(mostRecommendedTour[,1:60],decreasing = TRUE)[1:10]
+(d)
+# ffreqs <- as.numeric(as.character(d))
+# ffreqs
+rows <- d[1,]
+rows
+rows <- as.numeric(rows)
+rows
+tours <- names(d[,1:10])
+sort(as.numeric(tours))
+tours
+tourNames <- (purchase[purchase$id %in% tours]$name)
+
+tourNameDf <- data.frame()
+
+
+
+for (i in 1:length(tours)) {
+    
+   #print(i)
+   #print(unique(purchase[purchase$id == tours[i]]$name))
+  
+   
+   tour_name <- as.character(unique(purchase[purchase$id == tours[i]]$name) )
+   # print(tour_name)
+   if (length(tour_name) > 0){
+     #print(tour_name[1])
+     tourNameDf <- rbind(tourNameDf, data.frame(tourid = tours[i], tournames = toString(tour_name[1])))
+
+   }
+
+}
+
+print(tourNameDf)
+
+tourNames <- (purchase[purchase$id %in% tours]$name)
+tourNames <- as.factor(tourNames)
+length(tourNames)
+length(rows)
+
+# indx <- (purchase$id %in% tours)
+# head(indx)
+
+dff <- data.frame(tourids=tourNameDf$tournames,
+                 freq=rows)
+head(dff)
+
+library(ggplot2)
+# Basic barplot
+p<-ggplot(data=dff, aes(x=tourids, y=freq)) +
+  geom_bar(stat="identity")
+
+p +labs(title="10 most purchased tours") +theme(axis.text.x = element_text(angle = 90, hjust = 1))
+# Horizontal bar plot
+# p + coord_flip()
+
+
+
+############################# Numerical Analysis #############################
+vector_k <- c(5,10,15,20,25)
+
+models_to_evaluate <- lapply(vector_k, function(k){
+  list(name = "IBCF", param = list(method = "Jaccard", k = k))
+})
+names(models_to_evaluate) <- paste0("IBCF_k_", vector_k)
+
+list_results <- evaluate(x = es, method = models_to_evaluate, n
+                         = n_recommendations)
+
+
+plot(list_results, annotate = 1, legend = "bottomright")
+title("ROC curve")
+
+
+plot(list_results, "prec/rec", annotate = 1, legend = "bottomright")
+title("Precision-recall")
+
+############################# Recommendations with k = 15 #############################
+
+
+ces <- evaluationScheme(ratings_matrix, method="cross-validation",
+                       k=4, given=1)
+ces
+r <- Recommender(getData(ces), "IBCF", param = list(method ="Jaccard", k=25))
+r
+p <- predict(r, getData(ces, "known"), type="topNList", n=10)
+p
+recommendedTours <- p@items$`1`
+recommendedTours
+unique(purchase[purchase$id %in% recommendedTours]$name)
+
+(recommendedTours)
+recommendedTourNameDf <- data.frame()
+
+for (i in 1:length(recommendedTours)) {
+  
+  tour_name <- as.character(unique(purchase[purchase$id == as.numeric(recommendedTours[i])]$name) )
+  print(tour_name)
+  if (length(tour_name) > 0){
+    #print(tour_name[1])
+    recommendedTourNameDf <- rbind(recommendedTourNameDf, data.frame(tourid = recommendedTours[i], tournames = toString(tour_name[1])))
+  }
+}
+
+print(tourNameDf)
